@@ -84,10 +84,12 @@ namespace SphereRaycasting
             pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height);
             Sphere s1 = new Sphere(pictureBox1.Width / 2, pictureBox1.Height / 2, 150, 100);
             Sphere s2 = new Sphere(pictureBox1.Width / 2 - 200, pictureBox1.Height / 2 -100, 250, 50);
-            Sphere s3 = new Sphere(pictureBox1.Width / 2 - 100, pictureBox1.Height / 2 - 100, 0, 50);
+            Sphere s3 = new Sphere(pictureBox1.Width / 2 - 150, pictureBox1.Height / 2 - 100, 0, 50);
+            Sphere s4 = new Sphere(pictureBox1.Width / 2 + 50, pictureBox1.Height / 2 - 200, 0, 75);
             spheres.Add(s1);
             spheres.Add(s2);
             spheres.Add(s3);
+            spheres.Add(s4);
             viewerPoint = new Point3D(0, 0, -1000);
             lightSource = new Point3D(pictureBox1.Width / 2 - 150, pictureBox1.Height / 2, -100);          
             DrawIlluminatedSpheres();
