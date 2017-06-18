@@ -10,10 +10,10 @@ using System.Windows.Forms;
 using System.Windows.Media.Media3D;
 namespace SphereRaycasting
 {
-    class Ray
+    public class Ray
     {
-        Point3D From { get; set; }
-        Point3D To { get; set; }
+        public Point3D From { get; set; }
+        public Point3D To { get; set; }
         public Ray(double fromX, double fromY, double fromZ, double toX, double toY, double toZ)
         {
             From = new Point3D(fromX, fromY, fromZ);
@@ -36,30 +36,52 @@ namespace SphereRaycasting
             return vec;
         }
     }
+    public class Sphere
+    {
+        public int centerX { get; set; }
+        public int centerY { get; set; }
+        public int centerZ { get; set; }
+        public int radius { get; set; }
+        public Sphere(int centX, int centY, int centZ, int r)
+        {
+            centerX = centX;
+            centerY = centY;
+            centerZ = centZ;
+            radius = r;
+        }
+    }
     public partial class PhongForm : Form
     {
-        private int sphereCenterX;
-        private int sphereCenterY;
-        private int sphereCenterZ;
-        private int sphereRadius;
+
         Point3D viewerPoint;
         Point3D lightSource;
         private Color defaultBackgroundColor = Color.Gray;
         private Color defaultSphereColor = Color.Green;
+        private List<Sphere> spheres = new List<Sphere>();
         public PhongForm()
         {
             InitializeComponent();
             pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height);
-            sphereCenterX = pictureBox1.Width / 2;
-            sphereCenterY = pictureBox1.Height / 2;
-            sphereCenterZ = 150;
-            sphereRadius = 200;
+            Sphere s1 = new Sphere(pictureBox1.Width / 2, pictureBox1.Height / 2, 150, 200);
+            spheres.Add(s1);
+            //sphereCenterX = pictureBox1.Width / 2;
+            //sphereCenterY = pictureBox1.Height / 2;
+            //sphereCenterZ = 150;
+            //sphereRadius = 200;
             viewerPoint = new Point3D(0, 0, -1000);
             lightSource = new Point3D(pictureBox1.Width / 2 - 150, pictureBox1.Height / 2, -100);
-            DrawVisibleSurface();
+            foreach(Sphere s in spheres)
+            {
+                DrawIlluminatedSphere(s);
+            }
         }
-        public void DrawVisibleSurface()
+        public void DrawIlluminatedSphere(Sphere sphere)
         {
+            int sphereCenterX = sphere.centerX;
+            int sphereCenterY = sphere.centerY;
+            int sphereCenterZ = sphere.centerZ;
+            int sphereRadius = sphere.radius;
+
             Bitmap bmp = (Bitmap)pictureBox1.Image;
             int viewerX = (int)viewerPoint.X;
             int viewerY = (int)viewerPoint.Y;
@@ -68,29 +90,33 @@ namespace SphereRaycasting
             {
                 for(int j = 0; j < bmp.Height; j++)
                 {
-                    List<double> intersectionXYZ = FindIntersectionWithSphere(viewerX, viewerY, viewerZ, i, j, 0);
+                    Ray rayFromCameraToPixel = new Ray(viewerX, viewerY, viewerZ, i, j, 0);
+                    List<double> intersectionXYZ = FindIntersectionWithSphere(rayFromCameraToPixel, sphere);
                     if(intersectionXYZ.Count > 0)
                     {
-                        bmp.SetPixel(i, j, GetPhongIlluminationColor((int)intersectionXYZ[0], (int)intersectionXYZ[1], (int)intersectionXYZ[2], false));
+                        bmp.SetPixel(i, j, GetPhongIlluminationColor((int)intersectionXYZ[0], (int)intersectionXYZ[1], (int)intersectionXYZ[2], false, sphere));
                     }
                     else
                     {
-                        bmp.SetPixel(i, j, GetPhongIlluminationColor(i, j, 0, true));
+                        bmp.SetPixel(i, j, GetPhongIlluminationColor(i, j, 0, true, sphere));
                     }
                 }
             }
         }
-        //Intersection of ray (x0, y0, z0) to (x1,y1,z1) with sphere
-        // TODO should accept a ray argument instead of enpoints of ray
-        public List<double> FindIntersectionWithSphere(int x0, int y0, int z0, int x1, int y1, int z1)
+        ///RAYCASTING
+        ///Intersection of ray (x0, y0, z0) to (x1,y1,z1) with sphere
+        ///TODO should accept a ray argument instead of enpoints of ray
+        public List<double> FindIntersectionWithSphere(Ray ray, Sphere sphere)
         {
-            double cx = sphereCenterX, cy = sphereCenterY, cz = sphereCenterZ, R = sphereRadius;
+            double x0 = ray.From.X, y0 = ray.From.Y, z0 = ray.From.Z;
+            double x1 = ray.To.X, y1 = ray.To.Y, z1 = ray.To.Z;
+            double cx = sphere.centerX, cy = sphere.centerY, cz = sphere.centerZ, r = sphere.radius;
             double dx = x1 - x0;
             double dy = y1 - y0;
             double dz = z1 - z0;
             double a = dx * dx + dy * dy + dz * dz;
             double b = 2 * dx * (x0 - cx) + 2 * dy * (y0 - cy) + 2 * dz * (z0 - cz);
-            double c = cx * cx + cy * cy + cz * cz + x0 * x0 + y0 * y0 + z0 * z0 + -2 * (cx * x0 + cy * y0 + cz * z0) - (R * R);
+            double c = cx * cx + cy * cy + cz * cz + x0 * x0 + y0 * y0 + z0 * z0 + -2 * (cx * x0 + cy * y0 + cz * z0) - (r * r);
             List<double> intersectionXYZ = new List<double>();
             double discriminant = (b * b) - (4 * a * c);
             if (discriminant < 0)
@@ -118,10 +144,10 @@ namespace SphereRaycasting
             return intersectionXYZ;
         }
         // x and y and z are points on the sphere
-        private Color GetPhongIlluminationColor(int x, int y, int z, bool isBackgroundPixel)
+        private Color GetPhongIlluminationColor(int x, int y, int z, bool isBackgroundPixel, Sphere sphere)
         {
             Color pixelColor = defaultBackgroundColor;
-            double cx = sphereCenterX, cy = sphereCenterY, cz = sphereCenterZ, R = sphereRadius;
+            double cx = sphere.centerX, cy = sphere.centerY, cz = sphere.centerZ, r = sphere.radius;
             int lightX = (int)lightSource.X;
             int lightY = (int)lightSource.Y;
             int lightZ = (int)lightSource.Z;
@@ -130,10 +156,10 @@ namespace SphereRaycasting
             if (!isBackgroundPixel)
             {
                 pixelColor = defaultSphereColor; // default sphereColor
-                double ka = 0.1; //ambient coefficient
-                double kd = 0.9; //diffuse coefficient
+                double ka = 0.2; //ambient coefficient
+                double kd = 0.8; //diffuse coefficient
                 double ks = 0.5; //specular coefficient
-                Vector3D normalVec = new Vector3D((x - cx) / R, (y - cy) / R, (z - cz) / R);
+                Vector3D normalVec = new Vector3D((x - cx) / r, (y - cy) / r, (z - cz) / r);
                 // TODO could use Ray class here
                 Ray fromSphereToLight = new Ray(x, y, z, lightX, lightY, lightZ);
                 //Vector3D vecFromSphereToLight = new Vector3D(lightX - x, lightY - y, lightZ - z);
@@ -157,7 +183,7 @@ namespace SphereRaycasting
                 int sR = pixelColor.R;
                 int sG = pixelColor.G;
                 int sB = pixelColor.B;
-                // ADDING DIFFUSE SHADING AND AMBIENT LIGHT AND SPECULAR LIGHT
+                // ADDING DIFFUSE SHADING, AMBIENT LIGHT AND SPECULAR LIGHT
                 int newR = Math.Abs((int)((ka * sR) + (kd * fctr * sR) + (ks * highlightFactor)));
                 int newG = Math.Abs((int)((ka * sG) + (kd * fctr * sG) + (ks * highlightFactor)));
                 int newB = Math.Abs((int)((ka * sB) + (kd * fctr * sB) + (ks * highlightFactor)));
@@ -169,11 +195,11 @@ namespace SphereRaycasting
             }
             else
             {
-                //We find the shadows
+                // We find the shadows
                 Ray fromBackgroundPixelToLight = new Ray(x, y, z, lightX, lightY, lightZ);
                 Vector3D vecFromPixelToLight = fromBackgroundPixelToLight.ToVector3D();
                 // TODO FindIntersectionWithSphere should accept Ray argument
-                List<double> intersectionXYZ = FindIntersectionWithSphere(x, y, z, lightX, lightY, lightZ);
+                List<double> intersectionXYZ = FindIntersectionWithSphere(fromBackgroundPixelToLight, sphere);
                 if(intersectionXYZ.Count > 0)
                 {
                     // ray intersects
